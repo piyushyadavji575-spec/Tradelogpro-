@@ -1,0 +1,237 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TradeLog Pro</title>
+<style>
+:root{--n:#0F172A;--b:#2563EB;--bg:#F8FAFC;--t:#111827;--m:#64748B;--bd:#E2E8F0}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--t)}
+aside{position:fixed;inset:0 auto 0 0;width:230px;background:var(--n);color:white;padding:22px 14px}.logo{font-size:21px;font-weight:800}.tag{color:#94A3B8;font-size:11px;margin:4px 10px 22px}
+nav button{display:block;width:100%;padding:12px;border:0;border-radius:8px;background:none;color:#CBD5E1;text-align:left;margin:3px 0}nav button:hover,nav button.active{background:#1E293B;color:#fff}
+main{margin-left:230px;padding:25px;max-width:1300px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px}h1{margin:0;font-size:28px}.muted{color:var(--m);font-size:13px}
+button.primary{background:var(--b);color:white;border:0;border-radius:8px;padding:12px 16px;font-weight:700}button.secondary{background:white;border:1px solid var(--bd);border-radius:8px;padding:11px 15px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:20px 0}.card{background:white;border:1px solid var(--bd);border-radius:12px;padding:18px}.num{font-size:25px;font-weight:800;margin-top:7px}.grid{display:grid;grid-template-columns:1.3fr .8fr;gap:14px}
+.view{display:none}.view.active{display:block}.trade{display:flex;justify-content:space-between;border-top:1px solid var(--bd);padding:13px 0}
+.form{margin-top:18px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field label{display:block;font-size:13px;font-weight:bold;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;padding:11px;border:1px solid var(--bd);border-radius:8px;background:white}.field textarea{min-height:80px}
+.full{grid-column:1/-1}.upload{border:2px dashed #CBD5E1;border-radius:10px;padding:24px;text-align:center}.upload input{display:none}.upload label{display:inline-block;background:#EFF6FF;color:#1D4ED8;padding:10px 14px;border-radius:8px;font-weight:bold}.preview{display:none;max-width:100%;max-height:220px;margin:15px auto;border-radius:8px}
+.tags{display:flex;flex-wrap:wrap;gap:7px}.tagbtn{border:1px solid var(--bd);background:white;border-radius:20px;padding:7px 10px;font-size:12px}.tagbtn.sel{background:#DBEAFE;border-color:var(--b);color:#1D4ED8}
+.actions{display:flex;gap:9px;margin-top:18px;flex-wrap:wrap}.empty{text-align:center;padding:30px;color:var(--m)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:11px;border-bottom:1px solid var(--bd);font-size:13px}
+.mobile{display:none}
+@media(max-width:800px){aside{display:none}main{margin:0;padding:16px 14px 75px}.stats{grid-template-columns:1fr 1fr}.grid,.fields{grid-template-columns:1fr}.full{grid-column:auto}.mobile{display:flex;position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--bd);z-index:5;justify-content:space-around}.mobile button{border:0;background:white;padding:11px 5px;color:var(--m);font-size:11px}.mobile button.active{color:var(--b);font-weight:bold}.top{align-items:flex-start}h1{font-size:23px}}
+</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head><body>
+<aside><div class="logo">TradeLog Pro</div><div class="tag">Track. Review. Learn.</div>
+<nav><button data-p="dash" class="active">Dashboard</button><button data-p="add">＋ Add Paper Trade</button><button data-p="journal">Journal</button><button data-p="calendar">Calendar</button><button data-p="analytics">Analytics</button><button data-p="reviews">Reviews</button><button data-p="settings">Settings</button></nav></aside>
+<main>
+<section id="auth" class="view active">
+  <div class="card" style="max-width:560px;margin:30px auto">
+    <h1>TradeLog Pro</h1>
+    <p class="muted">Paper-trading journal • Track. Review. Learn.</p>
+    <div id="authStatus" class="muted" style="margin:14px 0"></div>
+    <div class="field"><label>Email</label><input id="authEmail" type="email" placeholder="you@example.com"></div>
+    <div class="field" style="margin-top:12px"><label>Password</label><div style="position:relative"><input id="authPassword" type="password" placeholder="At least 6 characters" style="padding-right:52px"><button type="button" id="togglePassword" aria-label="Show password" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;font-size:22px;cursor:pointer;padding:8px;z-index:2;line-height:1">👁️</button></div></div>
+    <div class="actions">
+      <button class="primary" onclick="signUp()">Create account</button>
+      <button class="secondary" onclick="signIn()">Log in</button>
+    </div>
+    <button class="secondary" style="margin-top:10px;width:100%" onclick="show('forgot')">Forgot password?</button>
+    <p class="muted" style="margin-top:16px">Educational paper-trading only. No broker connections or real-money execution.</p>
+  </div>
+</section>
+<section id="forgot" class="view">
+  <div class="card" style="max-width:560px;margin:30px auto">
+    <h1>Reset your password</h1>
+    <p class="muted">Enter your account email and we will send a secure password reset link.</p>
+    <div id="forgotStatus" class="muted" style="margin:14px 0"></div>
+    <div class="field"><label>Email</label><input id="forgotEmail" type="email" placeholder="you@example.com"></div>
+    <div class="actions" style="margin-top:14px"><button class="primary" onclick="sendResetEmail()">Send reset email</button><button class="secondary" onclick="show('auth')">Back to login</button></div>
+  </div>
+</section>
+<section id="resetPassword" class="view">
+  <div class="card" style="max-width:560px;margin:30px auto">
+    <h1>Set a new password</h1>
+    <p class="muted">Choose a new password for your TradeLog Pro account.</p>
+    <div id="resetStatus" class="muted" style="margin:14px 0"></div>
+    <div class="field"><label>New password</label><input id="newPassword" type="password" placeholder="At least 6 characters"></div>
+    <div class="field" style="margin-top:12px"><label>Confirm password</label><input id="confirmPassword" type="password" placeholder="Enter it again"></div>
+    <div class="actions" style="margin-top:14px"><button class="primary" onclick="updatePassword()">Update password</button></div>
+  </div>
+</section>
+<section id="connect" class="view">
+  <div class="card" style="max-width:650px">
+    <h1>Connect your Supabase project</h1>
+    <p class="muted">Use your project's URL and public client key. Never enter a service-role/secret key here.</p>
+    <div class="field"><label>Project URL</label><input id="sbUrl" placeholder="https://your-project.supabase.co"></div>
+    <div class="field" style="margin-top:12px"><label>Publishable key / anon key</label><textarea id="sbKey" placeholder="Paste the public client key"></textarea></div>
+    <div class="actions"><button class="primary" onclick="connectSupabase()">Connect</button></div>
+    <div id="connectMsg" class="muted" style="margin-top:12px"></div>
+  </div>
+</section>
+<section id="dash" class="view active"><div class="top"><div><h1>Dashboard</h1><div class="muted">Track, review, and learn from your practice.</div></div><button class="primary" onclick="show('add')">＋ Add Paper Trade</button></div>
+<div class="stats"><div class="card"><div class="muted">Total Practice Trades</div><div class="num" id="total">0</div></div><div class="card"><div class="muted">Reviewed Trades</div><div class="num" id="reviewed">0</div></div><div class="card"><div class="muted">Crypto</div><div class="num" id="crypto">0</div></div><div class="card"><div class="muted">Forex</div><div class="num" id="forex">0</div></div></div>
+<div class="grid"><div class="card"><h3>Recent Trades</h3><div id="recent"></div></div><div class="card"><h3>Weekly Review</h3><p class="muted">Review practice, rules and lessons each week.</p><button class="secondary" onclick="show('reviews')">Open Review</button></div></div></section>
+
+<section id="add" class="view"><div class="top"><div><h1>Add Paper Trade</h1><div class="muted">Screenshot is optional.</div></div></div>
+<div class="card form"><h3>Market</h3><div class="fields"><div class="field"><label>Market</label><select id="market"><option>Crypto</option><option>Forex</option></select></div><div class="field"><label>Symbol / Pair</label><input id="symbol" placeholder="BTC/USD"></div></div>
+<h3>Trade Screenshots (Optional)</h3><div class="upload"><b>1. Closed Trade / Details Screenshot</b><p class="muted">Use the MT5/CoinSwitch closed-trade/details screen. This screenshot is used for OCR.</p><input id="file" type="file" accept="image/*"><label for="file">🖼️ Choose Closed Trade Screenshot</label><img id="preview" class="preview"></div><div class="upload" style="margin-top:12px"><b>2. Chart Screenshot</b><p class="muted">Upload the chart for the same trade. It is saved as visual evidence and is not used for OCR.</p><input id="chartFile" type="file" accept="image/*"><label for="chartFile">📈 Choose Chart Screenshot</label><img id="chartPreview" class="preview"></div>
+<h3>Trade Details</h3><div class="fields"><div class="field"><label>Direction</label><select id="dir"><option>Long</option><option>Short</option></select></div><div class="field"><label>Date & Time</label><input id="dt" type="datetime-local"></div><div class="field"><label>Entry</label><input id="entry"></div><div class="field"><label>Exit</label><input id="exit"></div><div class="field"><label>Stop Loss</label><input id="sl"></div><div class="field"><label>Take Profit</label><input id="tp"></div><div class="field"><label>Planned Risk</label><input id="risk"></div><div class="field"><label>Entry Rule</label><input id="rule"></div><div class="field"><label>Volume / Lot</label><input id="volume" placeholder="e.g. 0.06"></div><div class="field"><label>Profit</label><input id="profit"></div><div class="field"><label>Commission</label><input id="commission"></div><div class="field"><label>Swap</label><input id="swap"></div><div class="field"><label>Ticket ID</label><input id="ticketId"></div><div class="field"><label>Open Time</label><input id="openTime" placeholder="From screenshot if readable"></div><div class="field"><label>Close Time</label><input id="closeTime" placeholder="From screenshot if readable"></div></div><div id="ocrStatus" class="muted" style="margin-top:10px"></div><div class="actions"><button type="button" class="secondary" onclick="scanScreenshot()">Read Screenshot Details</button></div>
+<h3>Psychology</h3><div class="tags" id="tags"><button class="tagbtn">Calm</button><button class="tagbtn">Nervous</button><button class="tagbtn">FOMO</button><button class="tagbtn">Impulsive</button><button class="tagbtn">Followed Plan</button><button class="tagbtn">Broke Plan</button></div>
+<h3>Reflection</h3><div class="fields"><div class="field"><label>Mistake Tags</label><input id="mistakes"></div><div class="field"><label>What went well?</label><textarea id="well"></textarea></div><div class="field"><label>What went wrong?</label><textarea id="wrong"></textarea></div><div class="field"><label>What did I learn?</label><textarea id="learn"></textarea></div><div class="field full"><label>Notes</label><textarea id="notes"></textarea></div></div>
+<div class="actions"><button class="primary" onclick="save()">Save Paper Trade</button><button class="secondary" onclick="show('dash')">Cancel</button></div></div></section>
+
+<section id="journal" class="view"><div class="top"><h1>Journal</h1><button class="primary" onclick="show('add')">＋ Add Trade</button></div><div class="card form" id="jlist"></div></section>
+<section id="tradeDetails" class="view"><div class="top"><h1>Trade Details</h1><button class="secondary" onclick="show('journal')">← Back to Journal</button></div><div class="card form" id="tradeDetailBody"></div></section>
+<section id="calendar" class="view"><h1>Calendar</h1><div class="card form" id="cal"></div></section>
+<section id="analytics" class="view"><h1>Analytics</h1><div class="stats"><div class="card"><div class="muted">Practice Trades</div><div class="num" id="at">0</div></div><div class="card"><div class="muted">Reviewed</div><div class="num" id="ar">0</div></div><div class="card"><div class="muted">Long</div><div class="num" id="al">0</div></div><div class="card"><div class="muted">Short</div><div class="num" id="as">0</div></div></div><div class="card form"><h3>Practice Trades</h3><div id="analyticsTrades"></div></div><div class="card form"><h3>Recorded Psychology</h3><div id="patterns"></div></div></section>
+<section id="reviews" class="view"><h1>Weekly Reviews</h1><div class="card form"><div class="field"><label>What did I learn this week?</label><textarea id="weekly"></textarea></div><div class="actions"><button class="primary" onclick="saveWeeklyReview()">Save Review</button></div></div><div class="card form"><h3>Saved Reviews</h3><div id="reviewList"></div></div><div class="card form" id="reviewDetail" style="display:none"><h3>Review Details</h3><div id="reviewDetailBody"></div><div class="actions"><button class="secondary" type="button" onclick="closeReview()">Close</button></div></div></section>
+<section id="settings" class="view"><h1>Settings</h1><div class="card form"><p class="muted">Educational paper-trading journal. No broker connections or real-money execution.</p><div id="accountBox" class="card" style="margin:12px 0"></div><div class="actions"><button class="primary" onclick="show('connect')">Connect / Change Supabase</button><button class="secondary" onclick="signOut()">Log out</button><button class="secondary" onclick="exportData()">Export Data</button><button class="secondary" onclick="if(confirm('Delete local journal data?')){localStorage.removeItem('trades');location.reload()}">Delete Local Data</button></div></div></section>
+</main>
+<nav class="mobile"><button data-p="dash">Home</button><button data-p="add">＋ Add</button><button data-p="journal">Journal</button><button data-p="analytics">Analytics</button><button data-p="settings">More</button></nav>
+<script>
+let trades=JSON.parse(localStorage.getItem('trades')||'[]');
+let sb=null;
+const $=id=>document.getElementById(id);
+const SUPABASE_URL='https://fringamldrkrztghlicg.supabase.co';const SUPABASE_PUBLISHABLE_KEY='sb_publishable_EgPB4vte51sVbrLwzsx6Xg_HSrE9Wfq';
+function togglePasswordVisibility(){const input=$('authPassword'),btn=$('togglePassword');const showing=input.type==='password';input.type=showing?'text':'password';btn.textContent=showing?'🙈':'👁️';btn.setAttribute('aria-label',showing?'Hide password':'Show password');input.focus()}
+setTimeout(()=>{const btn=$('togglePassword');if(btn)btn.addEventListener('click',togglePasswordVisibility)},0)
+function initSupabase(){const url=localStorage.getItem('sb_url')||SUPABASE_URL,key=localStorage.getItem('sb_key')||SUPABASE_PUBLISHABLE_KEY;if(url&&key&&window.supabase){sb=window.supabase.createClient(url,key);localStorage.setItem('sb_url',url);localStorage.setItem('sb_key',key);return true}return false}
+let recoveryMode=false;
+let savingTrade=false;
+let selectedTradeIndex=-1;
+function resetAddTradeForm(){
+ const ids=['symbol','entry','exit','sl','tp','risk','rule','volume','profit','commission','swap','ticketId','openTime','closeTime','mistakes','well','wrong','learn','notes'];
+ ids.forEach(id=>{if($(id))$(id).value=''});
+ if($('market'))$('market').value='Crypto';
+ if($('dir'))$('dir').value='Long';
+ if($('dt'))$('dt').value=new Date().toISOString().slice(0,16);
+ document.querySelectorAll('.tagbtn.sel').forEach(x=>x.classList.remove('sel'));
+ if($('preview')){$('preview').src='';$('preview').style.display='none'}
+ if($('chartPreview')){$('chartPreview').src='';$('chartPreview').style.display='none'}
+ if($('file'))$('file').value='';
+ if($('chartFile'))$('chartFile').value='';
+ if($('ocrStatus'))$('ocrStatus').textContent='';
+}
+function show(p){
+ if(p==='add')resetAddTradeForm();
+ document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));const el=$(p);if(el)el.classList.add('active');document.querySelectorAll('[data-p]').forEach(x=>x.classList.toggle('active',x.dataset.p===p));render()
+}
+document.querySelectorAll('[data-p]').forEach(x=>x.onclick=()=>show(x.dataset.p));
+$('file').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{$('preview').src=r.result;$('preview').style.display='block';$('ocrStatus').textContent='Closed-trade screenshot loaded. Reading Entry, Exit and other readable details automatically…';setTimeout(()=>scanScreenshot(),50)};r.readAsDataURL(f)};
+$('chartFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{$('chartPreview').src=r.result;$('chartPreview').style.display='block'};r.readAsDataURL(f)};
+document.querySelectorAll('.tagbtn').forEach(x=>x.onclick=()=>x.classList.toggle('sel'));
+function tradeKey(t){return [t.market,t.symbol,t.dir,t.dt,t.entry,t.exit,t.sl,t.tp,t.risk,t.rule].map(x=>String(x??'').trim()).join('|')}
+function openTrade(i){selectedTradeIndex=i;const t=trades[i];if(!t){show('journal');return}show('tradeDetails')}
+function openTradeFromId(id){const i=trades.findIndex(t=>String(t.id)===String(id));if(i>=0)openTrade(i)}
+function saveWeeklyReview(){const text=$('weekly').value.trim();if(!text){alert('Write something before saving the review.');return}let arr=[];try{arr=JSON.parse(localStorage.getItem('weeklyReviews')||'[]')}catch(e){};arr.unshift({id:Date.now(),text,createdAt:new Date().toISOString()});localStorage.setItem('weeklyReviews',JSON.stringify(arr));localStorage.setItem('weekly',text);render();alert('Review saved')}
+function openReview(i){let arr=[];try{arr=JSON.parse(localStorage.getItem('weeklyReviews')||'[]')}catch(e){};const r=arr[i];if(!r)return;if($('weekly'))$('weekly').value=r.text;if($('reviewDetail')&&$('reviewDetailBody')){$('reviewDetailBody').innerHTML='<div class="muted">'+esc(new Date(r.createdAt).toLocaleString())+'</div><p style="white-space:pre-wrap">'+esc(r.text)+'</p>';$('reviewDetail').style.display='block';$('reviewDetail').scrollIntoView({behavior:'smooth',block:'start'})}}
+function closeReview(){if($('reviewDetail'))$('reviewDetail').style.display='none'}
+async function connectSupabase(){const url=$('sbUrl').value.trim().replace(/\/$/,''),key=$('sbKey').value.trim();if(!url||!key){$('connectMsg').textContent='Enter both fields.';return}try{const client=window.supabase.createClient(url,key);const {error}=await client.auth.getSession();if(error)throw error;localStorage.setItem('sb_url',url);localStorage.setItem('sb_key',key);sb=client;$('connectMsg').textContent='Connected. Now create an account or log in.';show('auth')}catch(e){$('connectMsg').textContent='Connection failed: '+e.message}}
+async function signUp(){if(!sb){show('connect');return}const email=$('authEmail').value.trim(),password=$('authPassword').value;if(!email||password.length<6){$('authStatus').textContent='Enter a valid email and a password of at least 6 characters.';return}const {error}=await sb.auth.signUp({email,password});$('authStatus').textContent=error?error.message:'Account created. Check your email if confirmation is required, then log in.'}
+async function signIn(){if(!sb){show('connect');return}const email=$('authEmail').value.trim(),password=$('authPassword').value;const {data,error}=await sb.auth.signInWithPassword({email,password});if(error){$('authStatus').textContent=error.message;return}await loadCloudTrades(data.user.id);show('dash')}
+async function sendResetEmail(){if(!sb){show('connect');return}const email=$('forgotEmail').value.trim();if(!email){$('forgotStatus').textContent='Enter your account email.';return}const redirectTo=window.location.origin+window.location.pathname;const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo});$('forgotStatus').textContent=error?error.message:'Reset email sent. Open the link from your email to choose a new password.'}
+async function updatePassword(){if(!sb){show('connect');return}const p=$('newPassword').value,c=$('confirmPassword').value;if(p.length<6){$('resetStatus').textContent='Password must be at least 6 characters.';return}if(p!==c){$('resetStatus').textContent='Passwords do not match.';return}const {error}=await sb.auth.updateUser({password:p});if(error){$('resetStatus').textContent=error.message;return}await sb.auth.signOut();$('authStatus').textContent='Password updated successfully. You can now log in.';$('newPassword').value='';$('confirmPassword').value='';window.history.replaceState({},document.title,window.location.pathname);recoveryMode=false;show('auth')}
+async function signOut(){if(sb)await sb.auth.signOut();show('auth')}
+async function loadCloudTrades(uid){if(!sb)return;const {data,error}=await sb.from('trades').select('*').eq('user_id',uid).order('trade_at',{ascending:false});if(!error&&data){let meta={};try{meta=JSON.parse(localStorage.getItem('tradeExtraData')||'{}')}catch(e){};trades=data.map(t=>{const x=meta[String(t.id)]||{};return {id:t.id,market:t.market,symbol:t.symbol,dir:t.direction,dt:t.trade_at?new Date(t.trade_at).toISOString().slice(0,16):'',entry:t.entry??'',exit:t.exit??'',sl:t.stop_loss??'',tp:t.take_profit??'',risk:t.planned_risk??'',rule:t.entry_rule??'',psych:t.psychology_tags||[],mistakes:(t.mistake_tags||[]).join(', '),well:t.what_went_well||'',wrong:t.what_went_wrong||'',learn:t.what_i_learned||'',notes:x.notes||'',reviewed:!!t.reviewed,volume:x.volume||'',profit:x.profit||'',commission:x.commission||'',swap:x.swap||'',ticketId:x.ticketId||'',openTime:x.openTime||'',closeTime:x.closeTime||'',screenshot:x.screenshot||'',closedScreenshot:x.closedScreenshot||x.screenshot||'',chartScreenshot:x.chartScreenshot||''}});localStorage.setItem('trades',JSON.stringify(trades));}}
+async function save(){
+ if(savingTrade)return;
+ savingTrade=true;
+ const btn=document.querySelector('#add .primary[onclick="save()"]');
+ if(btn){btn.disabled=true;btn.textContent='Saving…'}
+ try{
+  const t={id:'local-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),market:market.value,symbol:symbol.value||'Not entered',dir:dir.value,dt:dt.value||new Date().toISOString().slice(0,16),entry:entry.value,exit:exit.value,sl:sl.value,tp:tp.value,risk:risk.value,rule:rule.value,volume:$('volume')?.value||'',profit:$('profit')?.value||'',commission:$('commission')?.value||'',swap:$('swap')?.value||'',ticketId:$('ticketId')?.value||'',openTime:$('openTime')?.value||'',closeTime:$('closeTime')?.value||'',psych:[...document.querySelectorAll('.tagbtn.sel')].map(x=>x.textContent),mistakes:mistakes.value,well:well.value,wrong:wrong.value,learn:learn.value,notes:notes.value,reviewed:false,screenshot:$('preview').src||'',closedScreenshot:$('preview').src||'',chartScreenshot:$('chartPreview').src||''};
+  const key=tradeKey(t);
+  const recent=JSON.parse(localStorage.getItem('recentTradeKeys')||'[]');
+  const alreadyLocal=trades.some(x=>tradeKey(x)===key);
+  if(recent.includes(key)||alreadyLocal){alert('This trade was already saved.');return}
+  if(sb){
+   const {data:userData}=await sb.auth.getUser();const uid=userData?.user?.id;
+   if(uid){
+    const row={user_id:uid,market:t.market,symbol:t.symbol,direction:t.dir,trade_at:new Date(t.dt).toISOString(),entry:t.entry?Number(t.entry):null,exit:t.exit?Number(t.exit):null,stop_loss:t.sl?Number(t.sl):null,take_profit:t.tp?Number(t.tp):null,planned_risk:t.risk?Number(t.risk):null,entry_rule:t.rule||null,psychology_tags:t.psych,mistake_tags:t.mistakes?t.mistakes.split(',').map(x=>x.trim()).filter(Boolean):[],what_went_well:t.well||null,what_went_wrong:t.wrong||null,what_i_learned:t.learn||null,reviewed:false};
+    const {data,error}=await sb.from('trades').insert(row).select().single();if(error){alert('Cloud save failed: '+error.message);return}t.id=data.id;
+   }
+  }
+  trades.unshift(t);localStorage.setItem('trades',JSON.stringify(trades));let extra={};try{extra=JSON.parse(localStorage.getItem('tradeExtraData')||'{}')}catch(e){};extra[String(t.id)]={volume:t.volume,profit:t.profit,commission:t.commission,swap:t.swap,ticketId:t.ticketId,openTime:t.openTime,closeTime:t.closeTime,screenshot:t.screenshot,closedScreenshot:t.closedScreenshot||t.screenshot,chartScreenshot:t.chartScreenshot||'',notes:t.notes};localStorage.setItem('tradeExtraData',JSON.stringify(extra));recent.unshift(key);localStorage.setItem('recentTradeKeys',JSON.stringify(recent.slice(0,50)));alert(sb?'Paper trade saved to your account':'Paper trade saved locally');show('journal');
+ }finally{savingTrade=false;if(btn){btn.disabled=false;btn.textContent='Save Paper Trade'}}
+}
+function fillIfReadable(id,value){if(value&&$(id)&&!$(id).value)$(id).value=value}
+function parseOcrText(text){
+ const clean=String(text||'').replace(/\r/g,'').replace(/→/g,'->');
+ const out={};
+ const norm=v=>String(v||'').replace(/\s+/g,'').replace(/,/g,'.');
+ const get=(re)=>{const x=clean.match(re);return x&&x[1]?norm(x[1]):''};
+ const stamp='\d{4}[.\/-]\d{1,2}[.\/-]\d{1,2}\s+\d{1,2}:\d{2}:\d{2}';
+ const isDateTime=v=>/^\d{4}[.\/-]\d{1,2}(?:[.\/-]\d{1,2})?(?:\s+\d{1,2}:\d{2}:\d{2})?$/.test(v)||/^\d{1,2}:\d{2}(?::\d{2})?$/.test(v);
+ const price=/[-+]?\d{2,}(?:[.,]\d{2,})/g;
+ const prices=s=>(String(s).match(price)||[]).map(norm).filter(v=>!isDateTime(v));
+ const lines=clean.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+ const header=clean.match(/\b([A-Z][A-Z0-9._-]{2,15})\b[\s,;|]*(buy|sell|long|short)[\s,;|]+([0-9]+(?:[.,][0-9]+)?)/i);
+ if(header){
+   out.symbol=header[1]; out.dir=header[2].toLowerCase(); out.volume=norm(header[3]);
+   const rest=clean.slice(header.index+header[0].length);
+   const pv=prices(rest); if(pv.length>=2){out.entry=pv[0];out.exit=pv[1];}
+ }
+ out.symbol=out.symbol||get(/(?:symbol|pair|instrument)\s*[:#-]?\s*([A-Z0-9._\/-]{3,20})/i);
+ out.volume=out.volume||get(/(?:volume|lot|lots|size)\s*[:#-]?\s*([0-9]+(?:[.,][0-9]+)?)/i);
+ const arrow=clean.match(/(?:^|[^0-9:])([0-9]{1,6}(?:[ \u00a0][0-9]{3})*(?:[.,][0-9]+)?)\s*(?:->|→)\s*([0-9]{1,6}(?:[ \u00a0][0-9]{3})*(?:[.,][0-9]+)?)/);
+ if(arrow){out.entry=norm(arrow[1]);out.exit=norm(arrow[2]);}
+ out.entry=out.entry||get(/(?:entry|open[ \t]+price)\s*[:#-]?\s*([-+]?[0-9][0-9 ]*(?:[.,][0-9]+)?)/i);
+ out.exit=out.exit||get(/(?:exit|close[ \t]+price)\s*[:#-]?\s*([-+]?[0-9][0-9 ]*(?:[.,][0-9]+)?)/i);
+ out.sl=get(/(?:s\s*\/\s*l|stop[ \t]+loss|sl)\s*[:#-]?\s*([-+]?[0-9][0-9 ]*(?:[.,][0-9]+)?)/i);
+ out.tp=get(/(?:t\s*\/\s*p|take[ \t]+profit|tp)\s*[:#-]?\s*([-+]?[0-9][0-9 ]*(?:[.,][0-9]+)?)/i);
+ out.swap=get(/swap\s*[:#-]?\s*([-+]?[0-9][0-9 ]*(?:[.,][0-9]+)?)/i);
+ out.commission=get(/commission\s*[:#-]?\s*([-+]?[0-9][0-9 ]*(?:[.,][0-9]+)?)/i);
+ out.profit=get(/(?:profit|profit[ \t]*\/[ \t]*loss|p[ \t]*[\/&][ \t]*l|loss)\s*[:#-]?\s*[$€£₹]?\s*([-+]?[0-9][0-9 ]*(?:[.,][0-9]+)?)/i);
+ out.ticketId=(clean.match(/#\s*([0-9]{5,})/i)||[])[1]||((clean.match(/(?:ticket|deal|order)[ \t]*(?:id)?\s*[:#-]?\s*([0-9]{5,})/i)||[])[1]||'');
+ const side=clean.match(/\b(buy|sell|long|short)\b/i); out.dir=out.dir||(side?side[1].toLowerCase():'');
+ out.openTime=get(new RegExp('(?:open[ \t]+time|opened|open)\s*[:#-]?\s*('+stamp+')','i'));
+ out.closeTime=get(new RegExp('(?:close[ \t]+time|closed|close)\s*[:#-]?\s*('+stamp+')','i'));
+ if((!out.entry||!out.exit)&&header){
+   const startLine=Math.max(0,lines.findIndex(x=>x.toLowerCase().includes(header[1].toLowerCase())));
+   const nearby=lines.slice(startLine,startLine+8).join(' '); const pv=prices(nearby);
+   if(pv.length>=2){out.entry=out.entry||pv[0];out.exit=out.exit||pv[1];}
+ }
+ return out;
+}
+async function scanScreenshot(){
+ const img=$('preview')?.src;
+ if(!img){alert('Choose a screenshot first.');return}
+ if(!window.Tesseract){alert('Screenshot reader is not available right now.');return}
+ $('ocrStatus').textContent='Reading screenshot… Please wait.';
+ try{
+  const result=await Tesseract.recognize(img,'eng',{logger:m=>{if(m.status==='recognizing text'&&m.progress) $('ocrStatus').textContent='Reading screenshot… '+Math.round(m.progress*100)+'%'}});
+  const o=parseOcrText(result.data.text||'');
+  fillIfReadable('symbol',o.symbol);fillIfReadable('volume',o.volume);fillIfReadable('profit',o.profit);fillIfReadable('commission',o.commission);fillIfReadable('swap',o.swap);fillIfReadable('ticketId',o.ticketId);fillIfReadable('openTime',o.openTime);fillIfReadable('closeTime',o.closeTime);fillIfReadable('entry',o.entry);fillIfReadable('exit',o.exit);fillIfReadable('sl',o.sl);fillIfReadable('tp',o.tp);
+  if(o.dir&&$('dir'))$('dir').value=/sell|short/i.test(o.dir)?'Short':'Long';
+  $('ocrStatus').textContent='Done. Review the fields before saving. Unreadable or missing details were left blank.';
+ }catch(e){$('ocrStatus').textContent='Could not read the screenshot. You can enter the details manually.'}
+}
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function render(){
+if($('total'))$('total').textContent=trades.length;if($('reviewed'))$('reviewed').textContent=trades.filter(x=>x.reviewed).length;if($('crypto'))$('crypto').textContent=trades.filter(x=>x.market==='Crypto').length;if($('forex'))$('forex').textContent=trades.filter(x=>x.market==='Forex').length;if($('at'))$('at').textContent=trades.length;if($('ar'))$('ar').textContent=trades.filter(x=>x.reviewed).length;if($('al'))$('al').textContent=trades.filter(x=>x.dir==='Long').length;if($('as'))$('as').textContent=trades.filter(x=>x.dir==='Short').length;
+if($('recent'))$('recent').innerHTML=trades.slice(0,5).map((x,i)=>`<div class="trade" onclick="openTrade(${i})" style="cursor:pointer"><b>${esc(x.symbol)}</b><span class="muted">${esc(x.market)} · ${esc(x.dir)}</span></div>`).join('')||'<div class="empty">No practice trades yet.</div>';
+if($('jlist'))$('jlist').innerHTML=trades.length?'<div style="overflow:auto"><table><tr><th>Symbol</th><th>Market</th><th>Direction</th><th>Date</th></tr>'+trades.map((x,i)=>`<tr onclick="openTrade(${i})" style="cursor:pointer"><td>${esc(x.symbol)}</td><td>${esc(x.market)}</td><td>${esc(x.dir)}</td><td>${esc((x.dt||'').replace('T',' '))}</td></tr>`).join('')+'</table></div>':'<div class="empty">No saved trades yet.</div>';
+if($('cal'))$('cal').innerHTML=trades.length?trades.map((x,i)=>`<div class="trade" onclick="openTrade(${i})" style="cursor:pointer"><b>${esc((x.dt||'').slice(0,10))}</b><span>${esc(x.symbol)} · ${esc(x.market)}</span></div>`).join(''):'<div class="empty">No practice trades yet.</div>';
+if($('tradeDetailBody')){const t=trades[selectedTradeIndex];if(t){$('tradeDetailBody').innerHTML=`<div class="fields"><div><b>Symbol / Pair</b><div>${esc(t.symbol)}</div></div><div><b>Market</b><div>${esc(t.market)}</div></div><div><b>Direction</b><div>${esc(t.dir)}</div></div><div><b>Date & Time</b><div>${esc((t.dt||'').replace('T',' '))}</div></div><div><b>Entry</b><div>${esc(t.entry)}</div></div><div><b>Exit</b><div>${esc(t.exit)}</div></div><div><b>Stop Loss</b><div>${esc(t.sl)}</div></div><div><b>Take Profit</b><div>${esc(t.tp)}</div></div><div><b>Planned Risk</b><div>${esc(t.risk)}</div></div><div><b>Entry Rule</b><div>${esc(t.rule)}</div></div><div><b>Volume / Lot</b><div>${esc(t.volume)||'—'}</div></div><div><b>Profit</b><div>${esc(t.profit)||'—'}</div></div><div><b>Commission</b><div>${esc(t.commission)||'—'}</div></div><div><b>Swap</b><div>${esc(t.swap)||'—'}</div></div><div><b>Ticket ID</b><div>${esc(t.ticketId)||'—'}</div></div><div><b>Open Time</b><div>${esc(t.openTime)||'—'}</div></div><div><b>Close Time</b><div>${esc(t.closeTime)||'—'}</div></div></div><hr><h3>Psychology</h3><p>${esc((t.psych||[]).join(', ')||'Not recorded')}</p><h3>Reflection</h3><p><b>What went well:</b> ${esc(t.well)||'—'}</p><p><b>What went wrong:</b> ${esc(t.wrong)||'—'}</p><p><b>What did I learn:</b> ${esc(t.learn)||'—'}</p><p><b>Notes:</b> ${esc(t.notes)||'—'}</p>${(t.closedScreenshot||t.screenshot)?`<h3>Closed Trade Screenshot</h3><img src="${t.closedScreenshot||t.screenshot}" style="max-width:100%;border-radius:8px">`:''}${t.chartScreenshot?`<h3>Chart Screenshot</h3><img src="${t.chartScreenshot}" style="max-width:100%;border-radius:8px">`:''}`; }else $('tradeDetailBody').innerHTML='<div class="empty">Select a trade from Journal or Calendar.</div>'}
+let p={};trades.flatMap(x=>x.psych||[]).forEach(x=>p[x]=(p[x]||0)+1);if($('analyticsTrades'))$('analyticsTrades').innerHTML=trades.length?trades.map((x,i)=>`<div class="trade" onclick="openTrade(${i})" style="cursor:pointer"><span><b>${esc(x.symbol)}</b><br><span class="muted">${esc(x.market)} · ${esc(x.dir)} · ${esc((x.dt||'').replace('T',' '))}</span></span><span class="muted">Open →</span></div>`).join(''):'<div class="empty">No practice trades yet.</div>';
+if($('patterns'))$('patterns').innerHTML=Object.entries(p).map(x=>`<div class="trade"><span>${esc(x[0])}</span><b>${x[1]}</b></div>`).join('')||'<div class="empty">No psychology data yet.</div>';if($('weekly')&&!$('weekly').value&&localStorage.weekly)$('weekly').value=localStorage.weekly;
+if($('reviewList')){let arr=[];try{arr=JSON.parse(localStorage.getItem('weeklyReviews')||'[]')}catch(e){};$('reviewList').innerHTML=arr.length?arr.map((r,i)=>`<div class="trade"><span><b>${esc(new Date(r.createdAt).toLocaleString())}</b><br><span class="muted">${esc(r.text.length>90?r.text.slice(0,90)+'…':r.text)}</span></span><button class="secondary" onclick="openReview(${i})">Open</button></div>`).join(''):'<div class="empty">No saved reviews yet.</div>'}
+if($('accountBox'))$('accountBox').innerHTML=localStorage.getItem('sb_url')?'<b>Supabase connected</b><div class="muted">Cloud journal connection is configured.</div>':'<b>Local mode</b><div class="muted">Connect Supabase to use accounts and cloud-saved paper trades.</div>'}
+function exportData(){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(trades,null,2)],{type:'application/json'}));a.download='tradelog-pro-data.json';a.click()}
+const initialHash=window.location.hash.replace(/^#/,'');
+const initialHashParams=new URLSearchParams(initialHash);
+const initialQueryParams=new URLSearchParams(window.location.search);
+const initialType=initialQueryParams.get('type')||initialHashParams.get('type');
+const initialRecovery=initialType==='recovery'||initialHashParams.has('access_token')&&initialHashParams.has('refresh_token');
+if(initialRecovery){recoveryMode=true;}
+initSupabase();
+if(sb){
+  sb.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){recoveryMode=true;show('resetPassword')}});
+  if(recoveryMode){show('resetPassword')}
+  sb.auth.getSession().then(async({data})=>{
+    if(recoveryMode)return;
+    if(data.session){await loadCloudTrades(data.session.user.id);if(!recoveryMode)show('dash')}else{show('auth')}
+  })
+}else{show('connect')}
+render();
+</script></body></html>
